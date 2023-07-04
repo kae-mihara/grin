@@ -1,8 +1,12 @@
 import copy
 import datetime
 import os
+import sys
 import pathlib
 from argparse import ArgumentParser
+
+sys.path.append(os.path.abspath('.'))
+#print(pathlib.Path(os.curdir).absolute())
 
 import numpy as np
 import pytorch_lightning as pl
@@ -21,7 +25,6 @@ from lib.nn.utils.metric_base import MaskedMetric
 from lib.nn.utils.metrics import MaskedMAE, MaskedMAPE, MaskedMSE, MaskedMRE
 from lib.utils import parser_utils, numpy_metrics, ensure_list, prediction_dataframe
 from lib.utils.parser_utils import str_to_bool
-
 
 def has_graph_support(model_cls):
     return model_cls in [models.GRINet, models.MPGRUNet, models.BiMPGRUNet]
@@ -60,6 +63,8 @@ def get_dataset(dataset_name):
         dataset = datasets.MissingValuesMetrLA(p_fault=0., p_noise=0.25)
     elif dataset_name == 'bay_point':
         dataset = datasets.MissingValuesPemsBay(p_fault=0., p_noise=0.25)
+    elif dataset_name == 'arrival':
+        dataset = datasets.ArrivalDataset()
     else:
         raise ValueError(f"Dataset {dataset_name} not available in this setting.")
     return dataset
@@ -141,7 +146,7 @@ def run_experiment(args):
     # data module                          #
     ########################################
 
-    # instantiate dataset
+    # instantiate
     dataset_cls = GraphImputationDataset if has_graph_support(model_cls) else ImputationDataset
     torch_dataset = dataset_cls(*dataset.numpy(return_idx=True),
                                 mask=dataset.training_mask,
@@ -158,11 +163,11 @@ def run_experiment(args):
     dm = SpatioTemporalDataModule(torch_dataset, train_idxs=train_idxs, val_idxs=val_idxs, test_idxs=test_idxs,
                                   **data_conf)
     dm.setup()
-
+    print("dataset len:", len(dm.torch_dataset))
     # if out of sample in air, add values removed for evaluation in train set
     if not args.in_sample and args.dataset_name[:3] == 'air':
         dm.torch_dataset.mask[dm.train_slice] |= dm.torch_dataset.eval_mask[dm.train_slice]
-
+    print("dataset len:", len(dm.torch_dataset))
     # get adjacency matrix
     adj = dataset.get_similarity(thr=args.adj_threshold)
     # force adj with no self loop
@@ -228,7 +233,7 @@ def run_experiment(args):
                          gradient_clip_val=args.grad_clip_val,
                          gradient_clip_algorithm=args.grad_clip_algorithm,
                          callbacks=[early_stop_callback, checkpoint_callback])
-
+    print("dataset len:", len(dm.torch_dataset)) 
     trainer.fit(filler, datamodule=dm)
 
     ########################################

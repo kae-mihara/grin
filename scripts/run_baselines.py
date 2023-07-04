@@ -3,7 +3,9 @@ from argparse import ArgumentParser
 import numpy as np
 from fancyimpute import MatrixFactorization, IterativeImputer
 from sklearn.neighbors import kneighbors_graph
-
+import sys
+import os
+sys.path.append(os.path.abspath('.'))
 from lib import datasets
 from lib.utils import numpy_metrics
 from lib.utils.parser_utils import str_to_bool
@@ -33,7 +35,7 @@ def parse_args():
     args = parser.parse_args()
     # parse dataset
     if args.datasets[0] == 'all':
-        args.datasets = ['air36', 'air', 'bay', 'irish', 'la', 'bay_noise', 'irish_noise', 'la_noise']
+        args.datasets = ['arrival']
     # parse imputers
     if args.imputers[0] == 'all':
         args.imputers = ['mean', 'knn', 'mf', 'mice']
@@ -135,8 +137,8 @@ class MICEImputer(Imputer):
 
 
 def get_dataset(dataset_name):
-    if dataset_name[:3] == 'air':
-        dataset = datasets.AirQuality(impute_nans=True, small=dataset_name[3:] == '36')
+    if dataset_name == 'arrival':
+        dataset = datasets.ArrivalDataset()
     elif dataset_name == 'bay':
         dataset = datasets.MissingValuesPemsBay()
     elif dataset_name == 'la':

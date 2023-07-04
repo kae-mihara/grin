@@ -46,8 +46,6 @@ class PandasDataset:
             # make sure that all the dataframes are aligned
             self.resample_(self.freq, aggr=aggr)
 
-        assert 'T' in self.freq
-        self.samples_per_day = int(60 / int(self.freq[:-1]) * 24)
 
     def __repr__(self):
         return "{}(nodes={}, length={})".format(self.__class__.__name__, self.n_nodes, self.length)
